@@ -1,0 +1,20 @@
+<!doctype html><html><body style="margin:0;background:#000">
+<video id="v" muted loop style="width:100%;height:100%"></video>
+<script>
+function log(m){ console.log('[MSETEST] ' + m); }
+var v = document.getElementById('v');
+log('MediaSource=' + (typeof MediaSource) + ' mp4 supported=' + (window.MediaSource && MediaSource.isTypeSupported('video/mp4; codecs="avc1.4D4028"')));
+v.addEventListener('playing', function(){ log('playing ' + v.videoWidth + 'x' + v.videoHeight); });
+v.addEventListener('error', function(){ log('video error ' + (v.error && v.error.code)); });
+var ms = new MediaSource();
+v.src = URL.createObjectURL(ms);
+ms.addEventListener('sourceopen', function(){
+  log('sourceopen');
+  var sb = ms.addSourceBuffer('video/mp4; codecs="avc1.4D4028"');
+  var x = new XMLHttpRequest(); x.open('GET', 'mse-test.mp4'); x.responseType = 'arraybuffer';
+  x.onload = function(){ log('fetched ' + x.response.byteLength); sb.addEventListener('updateend', function(){ if (ms.readyState === 'open') { ms.endOfStream(); log('buffered ' + v.buffered.end(0)); v.play(); } }); sb.appendBuffer(x.response); };
+  x.onerror = function(){ log('xhr error'); };
+  x.send();
+});
+setInterval(function(){ log('t=' + v.currentTime.toFixed(2) + ' paused=' + v.paused); }, 3000);
+</script></body></html>
