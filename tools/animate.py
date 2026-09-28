@@ -305,6 +305,83 @@ def scene_robot(img):
     return f, dict(zoom=0.03, pan=(12, 0))
 
 
+# ---------- comic-book look (Spider-Verse-style) ----------
+
+def comic_print(frame, t, shift_px=3, dots=0.45):
+    """Halftone dots in the shadows plus colour-plate misregistration that
+    jumps on twos, like an offset-printed comic."""
+    hgt, wid, _ = frame.shape
+    if not hasattr(comic_print, 'grid') or comic_print.grid[0].shape != (hgt, wid):
+        ys, xs = np.mgrid[0:hgt, 0:wid].astype(np.float32)
+        u, v = (xs + ys) * 0.7071, (xs - ys) * 0.7071           # 45-degree screen
+        comic_print.grid = (0.5 + 0.5 * np.sin(u * TAU / 7.0) * np.sin(v * TAU / 7.0), )
+    pattern = comic_print.grid[0]
+    lum = frame.mean(-1)
+    shade = np.clip((0.42 - lum) / 0.42, 0, 1)
+    out = frame * (1 - dots * ((pattern < shade * 0.9) * shade)[..., None])
+    step = int(t * 12)                                          # on twos at 24 fps
+    offsets = [(0, 0), (shift_px, 0), (-shift_px, shift_px // 2), (shift_px // 2, -shift_px)]
+    dx, dy = offsets[step % len(offsets)]
+    out[..., 0] = np.roll(out[..., 0], (dy, dx), axis=(0, 1))   # red plate
+    out[..., 2] = np.roll(out[..., 2], (-dy, -dx), axis=(0, 1))  # blue plate
+    return out
+
+
+def on_twos(t):
+    return math.floor(t * 12) / 12.0
+
+
+def scene_inventor(img):
+    hgt, wid, _ = img.shape
+    rng = rng_for('inventor')
+    ys, xs = np.mgrid[0:hgt, 0:wid].astype(np.float32)
+    holo = soft_box((hgt, wid), 185, 25, 550, 495, 12)
+    h, s, v = rgb_to_hsv_np(img)
+    holo_lines = holo * ((h > 0.42) & (h < 0.58) & (v > 0.55))
+    weld = (705.0, 728.0)
+    dist = np.sqrt((xs - weld[0]) ** 2 + (ys - weld[1]) ** 2)
+    wash = np.exp(-dist / 220.0)
+    core = np.exp(-(dist / 28.0) ** 2)
+    lamps = blur(soft_box((hgt, wid), 0, 230, 130, 300, 10) + soft_box((hgt, wid), 1260, 100, 1380, 150, 10)
+                 + soft_box((hgt, wid), 1430, 290, 1536, 340, 10), 12)
+    sparks = []
+    for _ in range(220):
+        ang = rng.uniform(0, TAU)
+        speed = rng.uniform(150, 520)
+        sparks.append((rng.uniform(0, T), rng.uniform(0.25, 0.7), speed * math.cos(ang), speed * math.sin(ang) - 120,
+                       [(255, 120, 230), (255, 255, 255), (255, 210, 90)][int(rng.integers(0, 3))]))
+    freqs = [(31, 0.2), (47, 1.1), (67, 2.4)]
+
+    def f(t_smooth):
+        t = on_twos(t_smooth)
+        a = max(0.0, 0.6 + 0.5 * sum(math.sin(TAU * fq * t / T + ph) for fq, ph in freqs) / len(freqs))
+        out = img + wash[..., None] * np.array([0.22, 0.08, 0.20], np.float32) * a
+        out = out + core[..., None] * np.array([1.0, 0.85, 1.0], np.float32) * a
+        # Hologram: flicker, a scan bar sweeping down, glitch jumps now and then
+        scan = np.exp(-((ys - (25 + 470 * ((t / T * 3) % 1.0))) / 10.0) ** 2)
+        flick = 0.8 + 0.2 * pulse(t, 9) - (0.35 if int(t * 12) % 29 == 0 else 0)
+        out = out + holo[..., None] * scan[..., None] * np.array([0.05, 0.35, 0.4], np.float32)
+        out = out * (1 + 0.5 * holo_lines[..., None] * (flick - 0.8))
+        if int(t * 12) % 23 == 0:                                        # hologram glitch
+            band = (ys > 150) & (ys < 190) & (holo > 0.5)
+            out = np.where(band[..., None], np.roll(out, 14, axis=1), out)
+        out = out * (1 + 0.25 * lamps[..., None] * pulse(t, 2))
+        lay = Layer((wid, hgt))
+        for born, life, vx, vy, col in sparks:
+            age = (t - born) % T
+            if age > life:
+                continue
+            def pos(k):
+                return weld[0] + vx * k, weld[1] + vy * k + 0.5 * 700 * k * k
+            x0, y0 = pos(max(0.0, age - 0.05))
+            x1, y1 = pos(age)
+            fade = 1 - age / life
+            lay.draw.line([(x0, y0), (x1, y1)], fill=tuple(int(c * fade) for c in col), width=3)
+        out = out + lay.out(0.5) * 1.3 + lay.out(3) * 0.6
+        return comic_print(out, t)
+    return f, dict(zoom=0.03, pan=(10, 0))
+
+
 SCENES = {
     'garage': scene_garage,
     'gamer': scene_gamer,
@@ -313,6 +390,7 @@ SCENES = {
     'trainer': scene_trainer,
     'synthwave': scene_synthwave,
     'robot': scene_robot,
+    'inventor': scene_inventor,
 }
 
 
