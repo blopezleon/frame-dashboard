@@ -46,17 +46,60 @@
     return clip;
   }
 
+  // The frame's built-in video player can't stream from modern HTTPS sites
+  // (its TLS is too old), so the browser downloads the clip and hands the
+  // bytes to the hardware decoder through Media Source Extensions.
+  // Clips must be fragmented MP4 (tools/animate.py and tools/add-clip.sh do this).
+  var CODEC = 'video/mp4; codecs="avc1.4D4028"';
+  var shownFile = null;
+  var objectUrl = null;
+  var loadSeq = 0;
+
   function show(clip) {
     if (!clip) return;
     FD.$('amb-name').textContent = clip.title || '';
-    var src = 'ambient/' + clip.file;
-    if (video.getAttribute('src') === src) { play(); return; }
+    if (shownFile === clip.file) { play(); return; }
+    shownFile = clip.file;
+    var seq = ++loadSeq;
     fade.classList.remove('clear');
-    setTimeout(function () {
-      video.setAttribute('src', src);
-      video.load();
-      play();
-    }, 900);
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'ambient/' + clip.file, true);
+    xhr.responseType = 'arraybuffer';
+    xhr.onload = function () {
+      if (seq !== loadSeq) return;  // another clip was picked meanwhile
+      if (xhr.status !== 200) { failed(); return; }
+      attach(xhr.response, clip.codec || CODEC, seq);
+    };
+    xhr.onerror = failed;
+    xhr.send();
+  }
+
+  function attach(bytes, codec, seq) {
+    var ms = new MediaSource();
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(ms);
+    ms.addEventListener('sourceopen', function () {
+      if (seq !== loadSeq) return;
+      try {
+        var sb = ms.addSourceBuffer(codec);
+        sb.addEventListener('updateend', function () {
+          if (ms.readyState === 'open') ms.endOfStream();
+          play();
+        });
+        sb.appendBuffer(bytes);
+      } catch (e) { failed(); }
+    });
+    setTimeout(function () {  // let the fade to black finish first
+      if (seq !== loadSeq) return;
+      video.src = objectUrl;
+    }, 600);
+  }
+
+  function failed() {
+    // Broken or missing clip: move on to the next one.
+    shownFile = null;
+    setTimeout(function () { if (FD.current() === 'ambient') show(nextClip()); }, 3000);
   }
 
   function play() {
@@ -93,10 +136,9 @@
       fade = FD.$('amb-fade');
 
       video.addEventListener('playing', function () { fade.classList.add('clear'); });
-      video.addEventListener('error', function () {
-        // Broken or missing file: skip to the next one.
-        setTimeout(function () { show(nextClip()); }, 2000);
-      });
+      video.addEventListener('error', failed);
+      // Belt and braces for looping a MediaSource stream on old WebViews.
+      video.addEventListener('ended', function () { video.currentTime = 0; play(); });
 
       FD.$('view-ambient').addEventListener('click', function (e) {
         if (e.target === FD.$('amb-skip')) return;

@@ -7,7 +7,7 @@ in="$1"; name="$2"; title="${3:-$2}"
 cd "$(dirname "$0")/.."
 ffmpeg -y -loglevel error -i "$in" -t 60 \
   -vf "scale=1280:800:force_original_aspect_ratio=increase:flags=lanczos,crop=1280:800,fps=24,format=yuv420p" \
-  -c:v libx264 -profile:v main -level 4.0 -preset slow -crf 21 -movflags +faststart -an "ambient/$name.mp4"
+  -c:v libx264 -profile:v main -level 4.0 -preset slow -crf 21 -movflags frag_keyframe+empty_moov+default_base_moof -an "ambient/$name.mp4"
 python3 - "$name.mp4" "$title" <<'PY'
 import json, sys
 p = 'ambient/playlist.json'

@@ -282,7 +282,7 @@ def main():
         'ffmpeg', '-y', '-loglevel', 'error',
         '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{W}x{H}', '-r', str(FPS), '-i', '-',
         '-c:v', 'libx264', '-profile:v', 'main', '-level', '4.0', '-pix_fmt', 'yuv420p',
-        '-preset', 'slow', '-crf', '21', '-movflags', '+faststart', '-an', out,
+        '-preset', 'slow', '-crf', '21', '-movflags', 'frag_keyframe+empty_moov+default_base_moof', '-an', out,
     ], stdin=subprocess.PIPE)
     for i in range(N):
         ff.stdin.write(np.asarray(camera(f(i / FPS), i / FPS, **cam)).tobytes())
