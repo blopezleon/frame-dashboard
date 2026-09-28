@@ -119,7 +119,7 @@
 
   /* ---------- Views: tap a tab or swipe sideways ---------- */
 
-  var VIEWS = ['cal', 'music'];
+  var VIEWS = ['cal', 'week', 'music'];
   var current = null;
   var showHandlers = [];
 

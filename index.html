@@ -11,7 +11,8 @@
 <header id="top">
   <div class="clock"><div id="time"></div><div id="date"></div></div>
   <nav class="tabs">
-    <button class="tab" data-view="cal">Calendar</button>
+    <button class="tab" data-view="cal">Today</button>
+    <button class="tab" data-view="week">Week</button>
     <button class="tab" data-view="music">Music</button>
   </nav>
   <div id="mini" class="mini hidden">
@@ -23,15 +24,26 @@
 <main id="views">
 
   <section id="view-cal" class="view">
-    <div class="cal-col cal-today">
+    <div class="col-wx"><div id="wx" class="card wx"></div></div>
+    <div class="col-main">
+      <div id="upnext"></div>
       <h2 class="section">Today</h2>
-      <div id="cal-today" class="scroll"></div>
+      <div id="cal-today" class="scroll list"></div>
     </div>
-    <div class="cal-col cal-upcoming">
-      <h2 class="section">Coming up</h2>
-      <div id="cal-upcoming" class="scroll"></div>
+    <div class="col-due">
+      <h2 class="section">Due soon <span id="due-count" class="count"></span></h2>
+      <div id="due-list" class="scroll list"></div>
     </div>
     <div id="cal-status" class="status"></div>
+  </section>
+
+  <section id="view-week" class="view">
+    <div class="week-nav">
+      <button id="wk-prev" class="chip nav-btn" aria-label="Previous week">&#8249;</button>
+      <div id="wk-range" class="wk-range"></div>
+      <button id="wk-next" class="chip nav-btn" aria-label="Next week">&#8250;</button>
+    </div>
+    <div id="week" class="week"></div>
   </section>
 
   <section id="view-music" class="view">
@@ -97,6 +109,7 @@
 <script src="config.js"></script>
 <script src="js/core.js"></script>
 <script src="js/sha256.js"></script>
+<script src="js/weather.js"></script>
 <script src="js/calendar.js"></script>
 <script src="js/spotify.js"></script>
 <script src="js/main.js"></script>
