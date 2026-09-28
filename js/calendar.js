@@ -176,6 +176,11 @@
       list.innerHTML = '<div class="empty small">Canvas isn\'t connected yet.</div>';
       return;
     }
+    if (data.canvasError) {
+      FD.$('due-count').textContent = '';
+      list.innerHTML = '<div class="empty small">Couldn\'t load Canvas. Check the Google script.</div>';
+      return;
+    }
     var due = (data.due || []).filter(function (d) { return d.s > now; })
       .sort(function (a, b) { return a.s - b.s; });
     FD.$('due-count').textContent = due.length ? due.length : '';
