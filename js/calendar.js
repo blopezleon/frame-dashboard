@@ -74,7 +74,7 @@
   }
 
   function card(ev, dayFrom, extraClass, badge) {
-    var sub = [ev.c, ev.l].filter(Boolean).join(' · ');
+    var sub = [ev.c, ev.l].filter(function (s) { return s && String(s).trim(); }).join(' · ');
     return '<div class="ev ' + (extraClass || '') + '" style="border-left-color:' + FD.esc(ev.col || '#4f8cff') + '">' +
       '<div class="ev-time">' + timeLabel(ev, dayFrom) + '</div>' +
       '<div class="ev-main"><div class="ev-title">' + FD.esc(ev.t || '(No title)') + '</div>' +
