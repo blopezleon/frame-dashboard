@@ -136,7 +136,8 @@
     if (live) badge = 'ends ' + untilLabel(next.e - now);
     else if (next.s - now < 12 * HOUR) badge = untilLabel(next.s - now);
     else badge = dayName(next.s);
-    var when = (next.s >= FD.dayStart(1) ? dayName(next.s) + ' · ' : '') + timeRange(next);
+    // The badge already names the day when it isn't a countdown.
+    var when = (next.s >= FD.dayStart(1) && badge !== dayName(next.s) ? dayName(next.s) + ' · ' : '') + timeRange(next);
 
     FD.$('upnext').innerHTML =
       '<div class="upnext' + (live ? ' live' : '') + '" data-ev="' + track(next) + '" style="border-left-color:' + colorOf(next) + '">' +
@@ -312,7 +313,7 @@
         html += '<div class="wk-ev' + (ev.e <= now ? ' past' : '') + '" data-ev="' + track(ev) + '" style="top:' + top +
           'px;height:' + hgt + 'px;left:' + (it.col * w) + '%;width:' + w + '%;background:' + colorOf(ev) + '">' +
           '<b>' + FD.esc(ev.t || '(No title)') + '</b>' +
-          (hgt > 40 ? '<span>' + FD.fmtTime(new Date(ev.s)) + (ev.l ? ' · ' + FD.esc(ev.l) : '') + '</span>' : '') +
+          (hgt > 40 ? '<span>' + FD.fmtTime(new Date(ev.s)) + (ev.l && String(ev.l).trim() ? ' · ' + FD.esc(ev.l) : '') + '</span>' : '') +
           '</div>';
       });
       if (isToday && now > base && now < base + (endH - startH) * HOUR) {
