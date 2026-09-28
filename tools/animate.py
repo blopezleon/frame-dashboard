@@ -254,6 +254,57 @@ def scene_synthwave(img):
     return f, dict(zoom=0.025, pan=(0, 0))
 
 
+def scene_robot(img):
+    hgt, wid, _ = img.shape
+    rng = rng_for('robot')
+    ys, xs = np.mgrid[0:hgt, 0:wid].astype(np.float32)
+    tip = (665.0, 495.0)                                   # welding torch tip
+    dist = np.sqrt((xs - tip[0]) ** 2 + (ys - tip[1]) ** 2)
+    wash = np.exp(-dist / 260.0)                           # weld light falling on the scene
+    core = np.exp(-(dist / 22.0) ** 2)
+    eyes = blur(soft_box((hgt, wid), 860, 212, 940, 252, 6), 6)
+    window = soft_box((hgt, wid), 600, 40, 1340, 280, 15)
+    drops = [(rng.uniform(560, 1360), rng.uniform(0, hgt), int(rng.integers(4, 7)),
+              rng.uniform(12, 26), rng.uniform(0.2, 0.4)) for _ in range(160)]
+    # Sparks: born at a phase of the loop, fly out, fall with gravity. Age is
+    # taken modulo T, so the shower is seamless.
+    sparks = []
+    for _ in range(320):
+        ang = rng.uniform(math.radians(15), math.radians(165))   # mostly downward spray
+        speed = rng.uniform(180, 520)
+        sparks.append((rng.uniform(0, T), rng.uniform(0.35, 0.95),
+                       speed * math.cos(ang) * rng.choice([-1, 1]) * 0.8, speed * math.sin(ang) - 160))
+    # Arc flicker: a few fast sine waves with whole-number cycles per loop.
+    freqs = [(37, 0.0), (53, 1.3), (71, 2.1), (13, 0.7)]
+
+    def arc(t):
+        v = sum(math.sin(TAU * f * t / T + ph) for f, ph in freqs) / len(freqs)
+        return max(0.0, 0.65 + 0.45 * v)
+
+    def f(t):
+        a = arc(t)
+        out = img + wash[..., None] * np.array([0.10, 0.16, 0.30], np.float32) * a
+        out = out + core[..., None] * np.array([0.7, 0.85, 1.0], np.float32) * a
+        out = out + eyes[..., None] * np.array([0.0, 0.25, 0.22], np.float32) * pulse(t, 2)
+        lay = Layer((wid, hgt))
+        g = 900.0
+        for born, life, vx, vy in sparks:
+            age = (t - born) % T
+            if age > life:
+                continue
+            def pos(k):
+                return tip[0] + vx * k, tip[1] + vy * k + 0.5 * g * k * k
+            x0, y0 = pos(max(0.0, age - 0.035))
+            x1, y1 = pos(age)
+            fade = 1 - age / life
+            col = (255, int(150 + 100 * fade), int(60 + 180 * fade ** 3))
+            c = tuple(int(ch * (0.35 + 0.65 * fade)) for ch in col)
+            lay.draw.line([(x0, y0), (x1, y1)], fill=c, width=2)
+        out = out + lay.out(0.8) * 1.4 + lay.out(4) * 0.8      # sharp sparks plus a soft glow
+        return out + rain((wid, hgt), t, drops, color=(170, 190, 230), angle=0.04, region=window)
+    return f, dict(zoom=0.03, pan=(12, 0))
+
+
 SCENES = {
     'garage': scene_garage,
     'gamer': scene_gamer,
@@ -261,6 +312,7 @@ SCENES = {
     'watch': scene_watch,
     'trainer': scene_trainer,
     'synthwave': scene_synthwave,
+    'robot': scene_robot,
 }
 
 
