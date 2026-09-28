@@ -2,7 +2,7 @@
      ?cal=<Apps Script web app URL>   save the calendar feed address
      ?sprt=<Spotify refresh token>    import a Spotify login made elsewhere
      ?handoff=1                       sign in to Spotify here, then show the token
-     ?view=cal|week|music            open on a tab */
+     ?view=cal|week|music|ambient    open on a tab */
 (function () {
   'use strict';
 
@@ -19,6 +19,7 @@
   FD.weather.init();
   FD.calendar.init();
   FD.spotify.init(q);
+  FD.ambient.init();
   FD.show(q.view || (q.code ? 'music' : FD.store.get('view')) || 'cal');
 
   // Keep secrets and one-time codes out of the address bar once they're consumed.

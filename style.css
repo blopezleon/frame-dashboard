@@ -38,16 +38,16 @@ button {
   border-bottom: 1px solid #1c212b;
 }
 
-.clock { flex: 0 0 340px; }
+.clock { flex: 0 0 300px; }
 #time { font-size: 46px; font-weight: 300; line-height: 1; }
 #time small { font-size: 20px; margin-left: 6px; color: #8b93a7; }
 #date { font-size: 18px; color: #8b93a7; margin-top: 6px; }
 
 .tabs { flex: 1; display: flex; justify-content: center; }
 .tab {
-  width: 160px;
-  height: 60px;
-  margin: 0 6px;
+  width: 136px;
+  height: 58px;
+  margin: 0 5px;
   border-radius: 30px;
   font-size: 22px;
   color: #8b93a7;
@@ -56,14 +56,14 @@ button {
 .tab.active { background: #e8eaf0; color: #0e1116; font-weight: 500; }
 
 .mini {
-  flex: 0 0 340px;
+  flex: 0 0 300px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   overflow: hidden;
 }
 .mini img { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; background: #1c212b; }
-.mini-text { margin-left: 14px; max-width: 260px; }
+.mini-text { margin-left: 14px; max-width: 220px; }
 #mini-title, #mini-artist { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #mini-title { font-size: 18px; }
 #mini-artist { font-size: 15px; color: #8b93a7; margin-top: 3px; }
@@ -496,6 +496,50 @@ input[type=range]::-webkit-slider-thumb {
 
 .sheet-note { font-size: 20px; color: #8b93a7; padding: 20px 4px; line-height: 1.4; }
 .sheet-foot { margin-top: 16px; }
+
+/* ---------- Ambient tab ---------- */
+
+#view-ambient { background: #000; }
+#amb-video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+.amb-fade {
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  background: #000;
+  opacity: 1;
+  -webkit-transition: opacity 0.9s;
+  transition: opacity 0.9s;
+  pointer-events: none;
+}
+.amb-fade.clear { opacity: 0; }
+.amb-ui {
+  position: absolute;
+  left: 32px; right: 32px; bottom: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  opacity: 0;
+  -webkit-transition: opacity 0.4s;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+.amb-name { font-size: 18px; color: rgba(255, 255, 255, 0.75); text-shadow: 0 1px 6px #000; }
+.amb-ui .chip { background: rgba(0, 0, 0, 0.55); margin: 0; }
+
+/* On the Ambient tab the header floats over the video and only shows on tap. */
+body.immersive #top {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 5;
+  height: 96px;
+  background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0));
+  border-bottom: 0;
+  opacity: 0;
+  pointer-events: none;
+  -webkit-transition: opacity 0.4s;
+  transition: opacity 0.4s;
+}
+body.immersive.show-ui #top,
+body.immersive.show-ui .amb-ui { opacity: 1; pointer-events: auto; }
 
 /* ---------- Toast ---------- */
 

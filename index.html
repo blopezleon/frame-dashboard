@@ -14,6 +14,7 @@
     <button class="tab" data-view="cal">Today</button>
     <button class="tab" data-view="week">Week</button>
     <button class="tab" data-view="music">Music</button>
+    <button class="tab" data-view="ambient">Ambient</button>
   </nav>
   <div id="mini" class="mini hidden">
     <img id="mini-art" alt="">
@@ -95,6 +96,15 @@
     </div>
   </section>
 
+  <section id="view-ambient" class="view">
+    <video id="amb-video" muted loop playsinline preload="auto"></video>
+    <div id="amb-fade" class="amb-fade"></div>
+    <div class="amb-ui">
+      <div id="amb-name" class="amb-name"></div>
+      <button id="amb-skip" class="chip">Next clip</button>
+    </div>
+  </section>
+
 </main>
 
 <div id="sheet" class="sheet hidden">
@@ -112,6 +122,7 @@
 <script src="js/weather.js"></script>
 <script src="js/calendar.js"></script>
 <script src="js/spotify.js"></script>
+<script src="js/ambient.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

@@ -119,7 +119,7 @@
 
   /* ---------- Views: tap a tab or swipe sideways ---------- */
 
-  var VIEWS = ['cal', 'week', 'music'];
+  var VIEWS = ['cal', 'week', 'music', 'ambient'];
   var current = null;
   var showHandlers = [];
 
@@ -133,6 +133,7 @@
       FD.$('view-' + v).classList.toggle('active', v === name);
       document.querySelector('.tab[data-view="' + v + '"]').classList.toggle('active', v === name);
     });
+    document.body.classList.toggle('immersive', name === 'ambient');
     FD.store.set('view', name);
     showHandlers.forEach(function (fn) { fn(name); });
   };
