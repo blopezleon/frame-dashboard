@@ -1,10 +1,32 @@
 {
   "clips": [
-    { "file": "garage.mp4", "title": "Rainy garage" },
-    { "file": "gamer.mp4", "title": "Night setup" },
-    { "file": "gym.mp4", "title": "Golden hour gym" },
-    { "file": "watch.mp4", "title": "Blue dial" },
-    { "file": "trainer.mp4", "title": "Trainer at sunset" },
-    { "file": "synthwave.mp4", "title": "Neon highway" }
+    {
+      "file": "garage.mp4",
+      "title": "Rainy garage"
+    },
+    {
+      "file": "gamer.mp4",
+      "title": "Night setup"
+    },
+    {
+      "file": "gym.mp4",
+      "title": "Golden hour gym"
+    },
+    {
+      "file": "watch.mp4",
+      "title": "Blue dial"
+    },
+    {
+      "file": "trainer.mp4",
+      "title": "Trainer at sunset"
+    },
+    {
+      "file": "synthwave.mp4",
+      "title": "Neon highway"
+    },
+    {
+      "file": "ghibli.mp4",
+      "title": "Gramophone (Studio Ghibli)"
+    }
   ]
 }
