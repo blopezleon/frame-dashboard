@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Frame Dashboard</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="top">
+  <div class="clock"><div id="time"></div><div id="date"></div></div>
+  <nav class="tabs">
+    <button class="tab" data-view="cal">Calendar</button>
+    <button class="tab" data-view="music">Music</button>
+  </nav>
+  <div id="mini" class="mini hidden">
+    <img id="mini-art" alt="">
+    <div class="mini-text"><div id="mini-title"></div><div id="mini-artist"></div></div>
+  </div>
+</header>
+
+<main id="views">
+
+  <section id="view-cal" class="view">
+    <div class="cal-col cal-today">
+      <h2 class="section">Today</h2>
+      <div id="cal-today" class="scroll"></div>
+    </div>
+    <div class="cal-col cal-upcoming">
+      <h2 class="section">Coming up</h2>
+      <div id="cal-upcoming" class="scroll"></div>
+    </div>
+    <div id="cal-status" class="status"></div>
+  </section>
+
+  <section id="view-music" class="view">
+    <img id="np-bg" class="np-bg" alt="">
+
+    <div id="sp-connect" class="sp-connect hidden">
+      <h2>Connect Spotify</h2>
+      <p id="sp-connect-msg">Sign in once to control your music from the frame.</p>
+      <button id="sp-login" class="big-btn">Sign in with Spotify</button>
+      <div id="sp-handoff" class="handoff hidden">
+        <p>Signed in. Copy this code and give it to Claude to finish setting up the frame:</p>
+        <textarea id="sp-token" readonly></textarea>
+      </div>
+    </div>
+
+    <div id="sp-player" class="sp-player hidden">
+      <div class="art-wrap"><img id="np-art" alt=""></div>
+      <div class="np">
+        <div id="np-title" class="np-title"></div>
+        <div id="np-artist" class="np-artist"></div>
+        <div id="np-album" class="np-album"></div>
+
+        <div id="np-bar" class="bar" data-noswipe><div id="np-fill" class="fill"></div></div>
+        <div class="times"><span id="np-pos">0:00</span><span id="np-dur">0:00</span></div>
+
+        <div class="controls">
+          <button id="btn-shuffle" class="icon small" aria-label="Shuffle"><svg viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg></button>
+          <button id="btn-prev" class="icon" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
+          <button id="btn-play" class="icon play" aria-label="Play or pause">
+            <svg class="i-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <svg class="i-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+          </button>
+          <button id="btn-next" class="icon" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+          <button id="btn-repeat" class="icon small" aria-label="Repeat">
+            <svg class="i-repeat" viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+            <svg class="i-repeat-one" viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z"/></svg>
+          </button>
+        </div>
+
+        <div class="row2">
+          <button id="btn-device" class="chip"><svg viewBox="0 0 24 24"><path d="M17 2H7c-1.1 0-2 .9-2 2v16c0 1.1.9 1.99 2 1.99L17 22c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-5 2c1.1 0 2 .9 2 2s-.9 2-2 2c-1.11 0-2-.9-2-2s.89-2 2-2zm0 16c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg><span id="np-device">Pick a device</span></button>
+          <button id="btn-lists" class="chip"><svg viewBox="0 0 24 24"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>Playlists</button>
+          <div id="vol-wrap" class="vol" data-noswipe>
+            <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+            <input id="vol" type="range" min="0" max="100" value="50">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div id="sheet" class="sheet hidden">
+  <div class="sheet-panel">
+    <div class="sheet-head"><h3 id="sheet-title"></h3><button id="sheet-close" class="chip">Close</button></div>
+    <div id="sheet-body" class="sheet-body scroll"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="config.js"></script>
+<script src="js/core.js"></script>
+<script src="js/sha256.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/spotify.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
