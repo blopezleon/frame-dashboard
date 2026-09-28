@@ -14,6 +14,9 @@ var KEY = 'CHANGE_ME';
 // Canvas → Calendar → "Calendar Feed" (bottom right). Leave empty to skip Canvas.
 var CANVAS_FEED = '';
 
+// Rename Canvas course codes, e.g. a cross-listed course Canvas files under the grad number.
+var COURSE_NAMES = { EEL6825: 'EEL4930' };
+
 // Leave empty to use every calendar that's checked in Google Calendar,
 // or list calendar IDs, e.g. ['primary', 'family123@group.calendar.google.com'].
 var CALENDAR_IDS = [];
@@ -74,34 +77,42 @@ function googleEvents(start, end) {
 /* ---------- Canvas (iCalendar feed) ---------- */
 
 function canvasDue(from, to) {
+  // The raw feed is too big for the script cache (100 KB per value), so cache
+  // the parsed list of upcoming assignments instead.
   var cache = CacheService.getScriptCache();
-  var ics = cache.get('canvas.ics');
-  if (!ics) {
-    ics = UrlFetchApp.fetch(CANVAS_FEED, { muteHttpExceptions: false }).getContentText();
-    // Script cache values max out at 100 KB; skip caching bigger feeds.
-    if (ics.length < 95000) cache.put('canvas.ics', ics, 15 * 60);
+  var cached = cache.get('canvas.due');
+  var all = cached ? JSON.parse(cached) : null;
+  if (!all) {
+    all = parseCanvas(UrlFetchApp.fetch(CANVAS_FEED).getContentText(), Date.now() - 2 * 86400000);
+    var json = JSON.stringify(all);
+    if (json.length < 95000) cache.put('canvas.due', json, 15 * 60);
   }
+  return all.filter(function (d) { return d.s >= from && d.s < to; });
+}
 
+function parseCanvas(ics, since) {
   var due = [];
   parseIcs(ics).forEach(function (ev) {
     if (!ev.DTSTART) return;
     var s = icsTime(ev.DTSTART, ev.DTSTART_PARAMS);
-    if (s === null || s < from || s >= to) return;
+    if (s === null || s < since) return;
     // Canvas marks assignments with "#assignment_<id>" in the event URL.
-    var url = ev.URL || '';
-    if (url.indexOf('assignment') < 0) return;
+    if ((ev.URL || '').indexOf('assignment') < 0) return;
 
-    var summary = ev.SUMMARY || '';
-    var m = /^(.*)\s\[([^\]]+)\]\s*$/.exec(summary);
-    var title = m ? m[1] : summary;
-    var courseFull = m ? m[2] : '';
+    var summary = (ev.SUMMARY || '').trim();
+    var m = /^(.*?)\s*\[([^\]]+)\]$/.exec(summary);
+    var title = (m ? m[1] : summary)
+      .replace(/\s*\([A-Z]{3}\d{4}[^()]*(\([^)]*\))?[^()]*\)/g, '')  // "(EEL4930-PRRC(27197))"
+      .replace(/\s+/g, ' ').trim();
+    var courseFull = m ? m[2].trim() : '';
     var code = /[A-Z]{3}\s?\d{4}[A-Z]?/.exec(courseFull);
+    var course = code ? code[0].replace(' ', '') : courseFull;
     due.push({
       t: title,
       s: s,
-      course: code ? code[0].replace(' ', '') : courseFull,
+      course: COURSE_NAMES[course] || course,
       courseFull: courseFull,
-      d: (ev.DESCRIPTION || '').slice(0, NOTES_MAX)
+      d: (ev.DESCRIPTION || '').slice(0, 600)
     });
   });
   return due;
