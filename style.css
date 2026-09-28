@@ -240,7 +240,7 @@ button {
 #view-week { flex-direction: column; padding: 14px 24px 16px; }
 .week-nav { flex: 0 0 52px; display: flex; align-items: center; }
 .nav-btn { width: 72px; justify-content: center; padding: 0; margin-right: 0; }
-.nav-btn svg { width: 36px; height: 36px; margin: 0; flex-basis: 36px; fill: #e8eaf0; }
+.chip.nav-btn svg { width: 48px; height: 48px; margin: 0; flex: 0 0 48px; fill: #e8eaf0; }
 .nav-btn[disabled] { opacity: 0.3; }
 .wk-range { font-size: 22px; margin: 0 18px; min-width: 180px; text-align: center; }
 .week { flex: 1; position: relative; overflow: hidden; margin-top: 6px; }
