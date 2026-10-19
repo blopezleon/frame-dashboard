@@ -12,8 +12,12 @@
     'user-modify-playback-state',
     'user-read-currently-playing',
     'playlist-read-private',
-    'playlist-read-collaborative'
+    'playlist-read-collaborative',
+    'user-library-read'
   ].join(' ');
+  var PAGE = 50;     // tracks per API request
+  var BLOCK = 20;    // rows per rendered chunk of the track list
+  var ROW = 72;      // track row height in px; must match .trk in style.css
 
   var tok = FD.store.get('sp.tok');   // { a: access, r: refresh, x: expiry ms }
   var player = null;                  // last GET /me/player response
@@ -23,6 +27,9 @@
   var refreshing = null;              // queued callbacks while a refresh is in flight
   var volBusy = false;
   var shownArt = null;
+  var lists = null;                   // cached /me/playlists items, for "back"
+  var meId = null;
+  var tl = null;                      // open track list (see openTracks)
 
   /* ---------- Auth ---------- */
 
@@ -306,11 +313,13 @@
     }
 
     renderProgress();
+    markPlaying();
   }
 
   /* ---------- Pickers ---------- */
 
   function openDevices() {
+    tl = null;
     FD.openSheet('Play on…', '<div class="sheet-note">Looking for devices…</div>');
     api('GET', '/me/player/devices', null, function (err, status, data) {
       var list = (data && data.devices) || [];
@@ -333,35 +342,222 @@
     });
   }
 
+  var HEART = '<svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
+
   function openPlaylists() {
+    tl = null;
     FD.openSheet('Playlists', '<div class="sheet-note">Loading playlists…</div>');
+    if (!meId) api('GET', '/me', null, function (err, status, data) { if (!err && data) meId = data.id; });
     api('GET', '/me/playlists?limit=50', null, function (err, status, data) {
       if (err) {
         FD.$('sheet-body').innerHTML = '<div class="sheet-note">' + FD.esc(errorText(status, data)) + '</div>';
         return;
       }
-      var items = (data && data.items) || [];
-      if (!items.length) {
-        FD.$('sheet-body').innerHTML = '<div class="sheet-note">No playlists found.</div>';
-        return;
-      }
-      FD.$('sheet-body').innerHTML = '<div class="tiles">' + items.map(function (p) {
+      lists = (data && data.items) || [];
+      renderPlaylists();
+    });
+  }
+
+  // Tapping a tile opens its song list; playing happens from there.
+  function renderPlaylists() {
+    tl = null;
+    FD.openSheet('Playlists', '<div class="tiles">' +
+      '<button class="tile" data-list="liked"><div class="ph liked">' + HEART + '</div><span>Liked Songs</span></button>' +
+      lists.map(function (p, i) {
         var imgs = p.images || [];
         var img = imgs.length ? imgs[imgs.length > 1 ? 1 : 0].url : '';
-        return '<button class="tile" data-uri="' + FD.esc(p.uri) + '">' +
+        return '<button class="tile" data-list="' + i + '">' +
           (img ? '<img src="' + FD.esc(img) + '" alt="">' : '<div class="ph"></div>') +
           '<span>' + FD.esc(p.name) + '</span></button>';
-      }).join('') + '</div>';
+      }).join('') + '</div>');
+  }
+
+  /* ---------- Track list ----------
+     Liked Songs can be thousands of tracks, so the list is virtual: a spacer
+     sized for every row, with only the chunks of rows near the viewport in
+     the DOM. Pages of 50 are fetched only once the scrolling settles on them. */
+
+  function openTracks(src) {
+    var body = FD.$('sheet-body');
+    tl = { src: src, total: -1, pages: {}, loading: {}, blocks: {}, fetchTimer: null, raf: 0 };
+    FD.$('sheet-title').textContent = src.name;
+    body.className = 'sheet-body tracks';
+    body.innerHTML = '<div class="trk-bar">' +
+      '<button class="chip" data-back><svg viewBox="0 0 24 24"><path d="M15.4 7.4L14 6l-6 6 6 6 1.4-1.4-4.6-4.6z"/></svg>Playlists</button>' +
+      '<span id="trk-count" class="trk-count"></span>' +
+      '<button class="chip" data-playall><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Play</button></div>' +
+      '<div id="trk-scroll" class="trk-scroll scroll"><div id="trk-space" class="trk-space">' +
+      '<div class="sheet-note">Loading songs…</div></div></div>';
+    FD.$('trk-scroll').addEventListener('scroll', onTrackScroll);
+    loadPage(tl, 0);
+  }
+
+  function tracksPath(src, offset) {
+    if (src.kind === 'liked') return '/me/tracks?limit=' + PAGE + '&offset=' + offset;
+    return '/playlists/' + encodeURIComponent(src.id) + '/items?limit=' + PAGE + '&offset=' + offset;
+  }
+
+  // Playlist entries use .item since Spotify's 2026 API change; liked songs use .track.
+  function entryInfo(e) {
+    var it = e && (e.item || e.track);
+    if (!it || !it.uri) return null;
+    var info = trackInfo(it);
+    info.uri = it.uri;
+    info.dur = it.duration_ms || 0;
+    return info;
+  }
+
+  function loadPage(t, p) {
+    if (t.pages[p] || t.loading[p]) return;
+    t.loading[p] = true;
+    api('GET', tracksPath(t.src, p * PAGE), null, function (err, status, data) {
+      t.loading[p] = false;
+      if (t !== tl) return;   // the sheet has moved on
+      if (err) {
+        // Later pages just retry on the next scroll; the first one shows why.
+        if (t.total < 0) FD.$('trk-space').innerHTML = '<div class="sheet-note">' + FD.esc(tracksError(t.src, status, data)) + '</div>';
+        return;
+      }
+      t.pages[p] = ((data && data.items) || []).map(entryInfo);
+      if (t.total < 0) {
+        t.total = (data && data.total) || 0;
+        FD.$('trk-count').textContent = t.total === 1 ? '1 song' : t.total + ' songs';
+        var space = FD.$('trk-space');
+        space.innerHTML = t.total ? '' : '<div class="sheet-note">No songs here yet.</div>';
+        space.style.height = t.total * ROW + 'px';
+      }
+      // Re-render chunks showing placeholders for this page.
+      for (var b = Math.floor(p * PAGE / BLOCK); b * BLOCK < (p + 1) * PAGE; b++) dropBlock(t, b);
+      updateTracks();
     });
+  }
+
+  function tracksError(src, status, data) {
+    if (status === 403 && src.kind === 'liked') {
+      return 'Liked Songs needs a fresh Spotify sign-in (the current one wasn\'t allowed to read your library).';
+    }
+    if (status === 403 || status === 404) {
+      return 'Spotify only lists the songs of playlists you own or collaborate on. You can still play it.';
+    }
+    return errorText(status, data);
+  }
+
+  function onTrackScroll() {
+    var t = tl;
+    if (!t || t.raf) return;
+    t.raf = requestAnimationFrame(function () { t.raf = 0; if (t === tl) updateTracks(); });
+  }
+
+  function updateTracks() {
+    var t = tl, sc = FD.$('trk-scroll');
+    if (!t || !sc || t.total <= 0) return;
+    var top = sc.scrollTop, h = sc.clientHeight, span = BLOCK * ROW;
+    // Keep about a screen of rows above and below the visible ones.
+    var first = Math.max(0, Math.floor((top - h) / span));
+    var last = Math.min(Math.ceil(t.total / BLOCK) - 1, Math.floor((top + 2 * h) / span));
+    Object.keys(t.blocks).forEach(function (k) { if (k < first || k > last) dropBlock(t, +k); });
+    for (var b = first; b <= last; b++) if (!t.blocks[b]) renderBlock(t, b);
+
+    // A fling passes over many pages; only fetch where it comes to rest.
+    clearTimeout(t.fetchTimer);
+    t.fetchTimer = setTimeout(function () {
+      if (t !== tl) return;
+      var p0 = Math.floor(Math.max(0, sc.scrollTop - h / 2) / ROW / PAGE);
+      var p1 = Math.floor(Math.min(t.total - 1, (sc.scrollTop + 1.5 * h) / ROW) / PAGE);
+      for (var p = p0; p <= p1; p++) loadPage(t, p);
+    }, 150);
+  }
+
+  function dropBlock(t, b) {
+    var el = t.blocks[b];
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+    delete t.blocks[b];
+  }
+
+  function renderBlock(t, b) {
+    var nowUri = player && player.item && player.item.uri;
+    var end = Math.min(t.total, (b + 1) * BLOCK);
+    var html = '';
+    for (var i = b * BLOCK; i < end; i++) {
+      var page = t.pages[Math.floor(i / PAGE)];
+      var n = '<span class="trk-n">' + (i + 1) + '</span>';
+      if (!page) {
+        html += '<div class="trk ph">' + n + '<span class="trk-img"></span>' +
+          '<span class="trk-text"><span class="trk-title"></span><span class="trk-artist"></span></span></div>';
+        continue;
+      }
+      var s = page[i % PAGE];
+      if (!s) {
+        html += '<div class="trk gone">' + n + '<span class="trk-img"></span>' +
+          '<span class="trk-text"><span class="trk-title">Unavailable</span></span></div>';
+        continue;
+      }
+      html += '<button class="trk' + (s.uri === nowUri ? ' on' : '') + '" data-track="' + i + '" data-turi="' + FD.esc(s.uri) + '">' + n +
+        (s.thumb || s.art ? '<img src="' + FD.esc(s.thumb || s.art) + '" alt="">' : '<span class="trk-img"></span>') +
+        '<span class="trk-text"><span class="trk-title">' + FD.esc(s.title) + '</span>' +
+        '<span class="trk-artist">' + FD.esc(s.artist) + '</span></span>' +
+        '<span class="trk-dur">' + FD.fmtDuration(s.dur) + '</span></button>';
+    }
+    var el = document.createElement('div');
+    el.className = 'trk-block';
+    el.style.top = b * BLOCK * ROW + 'px';
+    el.innerHTML = html;
+    FD.$('trk-space').appendChild(el);
+    t.blocks[b] = el;
+  }
+
+  // Highlight the playing song in the open list (called on every poll).
+  function markPlaying() {
+    if (!tl || !FD.$('trk-space')) return;
+    var nowUri = player && player.item && player.item.uri;
+    Array.prototype.forEach.call(FD.$('trk-space').querySelectorAll('[data-turi]'), function (el) {
+      el.classList.toggle('on', el.getAttribute('data-turi') === nowUri);
+    });
+  }
+
+  function playTrack(i) {
+    var src = tl.src;
+    if (src.kind === 'playlist') { startPlayback({ context_uri: src.uri, offset: { position: i } }); return; }
+    // Liked Songs: play the library as a context so it keeps going. If Spotify
+    // refuses that, fall back to queueing the loaded songs from here on.
+    var uris = [];
+    for (var j = i; uris.length < 100 && j < tl.total; j++) {
+      var page = tl.pages[Math.floor(j / PAGE)];
+      if (!page) break;
+      if (page[j % PAGE]) uris.push(page[j % PAGE].uri);
+    }
+    if (!uris.length) return;
+    var fallback = function () { startPlayback({ uris: uris }); };
+    if (!meId) { fallback(); return; }
+    startPlayback({ context_uri: 'spotify:user:' + meId + ':collection', offset: { uri: uris[0] } }, fallback);
+  }
+
+  function playAll() {
+    var src = tl.src;
+    if (src.kind === 'playlist') { playContext(src.uri); return; }
+    if (tl.total > 0 && tl.pages[0]) playTrack(0);
   }
 
   function playContext(uri) {
     FD.closeSheet();
+    startPlayback({ context_uri: uri });
+  }
+
+  // PUT /me/player/play; fallback runs instead of an error toast if Spotify
+  // rejects the request itself (not "no device" or rate limiting).
+  function startPlayback(body, fallback) {
     var path = '/me/player/play';
     // No active device: aim at the last one we saw so it can wake up.
     var last = FD.store.get('sp.lastDevice');
     if (!(player && player.device) && last) path += '?device_id=' + encodeURIComponent(last);
-    command('PUT', path, { context_uri: uri });
+    api('PUT', path, body, function (err, status, data) {
+      if (err && fallback && status !== 404 && status !== 429) { fallback(); return; }
+      if (err) {
+        FD.toast(errorText(status, data));
+        if (status === 404) openDevices();
+      }
+      setTimeout(poll, 700);
+    });
   }
 
   function onSheetClick(e) {
@@ -371,8 +567,18 @@
       command('PUT', '/me/player', { device_ids: [el.getAttribute('data-device')], play: true });
       return;
     }
-    el = FD.closestAttr(e.target, 'data-uri');
-    if (el) { playContext(el.getAttribute('data-uri')); return; }
+    el = FD.closestAttr(e.target, 'data-list');
+    if (el) {
+      var key = el.getAttribute('data-list');
+      var p = lists[+key];
+      openTracks(key === 'liked' ? { kind: 'liked', name: 'Liked Songs' }
+        : { kind: 'playlist', id: p.id, uri: p.uri, name: p.name });
+      return;
+    }
+    el = FD.closestAttr(e.target, 'data-track');
+    if (el && tl) { playTrack(+el.getAttribute('data-track')); return; }
+    if (FD.closestAttr(e.target, 'data-playall') && tl) { playAll(); return; }
+    if (FD.closestAttr(e.target, 'data-back') && lists) { renderPlaylists(); return; }
     if (FD.closestAttr(e.target, 'data-refresh')) { openDevices(); return; }
     if (FD.closestAttr(e.target, 'data-signout')) { FD.closeSheet(); signOut(); }
   }

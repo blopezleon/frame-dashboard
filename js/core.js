@@ -176,6 +176,7 @@
 
   FD.openSheet = function (title, html) {
     FD.$('sheet-title').textContent = title;
+    FD.$('sheet-body').className = 'sheet-body scroll';
     FD.$('sheet-body').innerHTML = html;
     FD.$('sheet-body').scrollTop = 0;
     FD.$('sheet').classList.remove('hidden');

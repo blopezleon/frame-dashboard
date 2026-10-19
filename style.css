@@ -494,6 +494,40 @@ input[type=range]::-webkit-slider-thumb {
 .tile img, .tile .ph { width: 184px; height: 184px; border-radius: 12px; object-fit: cover; background: #1c212b; display: block; }
 .tile span { display: block; font-size: 17px; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+.tile .ph.liked { background: linear-gradient(135deg, #4a1fb8, #8fa8e8); }
+.tile .ph.liked svg { width: 72px; height: 72px; margin: 56px; fill: #fff; }
+
+/* Track list: rows are absolutely placed chunks inside a full-height spacer */
+.sheet-body.tracks { display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+.trk-bar { display: flex; align-items: center; flex: 0 0 auto; margin-bottom: 12px; }
+.trk-count { flex: 1; font-size: 18px; color: #8b93a7; }
+.trk-scroll { flex: 1; min-height: 0; position: relative; }
+.trk-space { position: relative; }
+.trk-block { position: absolute; left: 0; right: 0; }
+.trk {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 72px;   /* ROW in spotify.js */
+  padding: 0 14px 0 0;
+  border-radius: 10px;
+  text-align: left;
+}
+.trk:active { background: rgba(255, 255, 255, 0.08); }
+.trk.on { background: #173524; }
+.trk.on .trk-title { color: #1ed760; }
+.trk-n { flex: 0 0 56px; margin-right: 16px; font-size: 16px; color: #8b93a7; text-align: right; }
+.trk img, .trk-img { flex: 0 0 52px; width: 52px; height: 52px; margin-right: 16px; border-radius: 6px; background: #1c212b; }
+.trk-text { flex: 1; min-width: 0; }
+.trk-title, .trk-artist { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trk-title { font-size: 20px; }
+.trk-artist { margin-top: 4px; font-size: 16px; color: #8b93a7; }
+.trk-dur { margin-left: 16px; font-size: 16px; color: #8b93a7; }
+.trk.ph .trk-title, .trk.ph .trk-artist { height: 16px; border-radius: 4px; background: #1c212b; }
+.trk.ph .trk-title { width: 40%; }
+.trk.ph .trk-artist { width: 25%; margin-top: 10px; }
+.trk.gone { opacity: 0.4; }
+
 .sheet-note { font-size: 20px; color: #8b93a7; padding: 20px 4px; line-height: 1.4; }
 .sheet-foot { margin-top: 16px; }
 
