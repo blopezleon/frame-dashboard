@@ -106,6 +106,8 @@
         return;
       }
       if (pk.h) {
+        FD.spotify.handoffMode = true;
+        render();
         // Handoff mode: signed in on another computer, show the refresh token
         // so it can be moved to the frame. Don't keep it here.
         FD.$('sp-handoff').classList.remove('hidden');
@@ -270,7 +272,8 @@
   }
 
   function render() {
-    var signedIn = !!tok;
+    // Handoff always shows the sign-in panel, even if this browser is signed in.
+    var signedIn = !!tok && !FD.spotify.handoffMode;
     FD.$('sp-connect').classList.toggle('hidden', signedIn);
     FD.$('sp-player').classList.toggle('hidden', !signedIn);
     if (!signedIn) {

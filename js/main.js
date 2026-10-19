@@ -20,7 +20,7 @@
   FD.calendar.init();
   FD.spotify.init(q);
   FD.ambient.init();
-  FD.show(q.view || (q.code ? 'music' : FD.store.get('view')) || 'cal');
+  FD.show(q.view || (q.code || q.handoff ? 'music' : FD.store.get('view')) || 'cal');
 
   // Keep secrets and one-time codes out of the address bar once they're consumed.
   if (location.search && q.handoff !== '1' && window.history && history.replaceState) {
